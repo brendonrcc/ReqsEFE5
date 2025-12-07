@@ -83,11 +83,6 @@ body.performance-mode * {
     -webkit-backdrop-filter: none !important;
 }
 
-/* Ajustes visuais específicos para quando o Blur é removido */
-body.performance-mode {
-    background: #f0f2f5 !important; /* Cor de fundo sólida */
-}
-
 /* Header sólido */
 body.performance-mode #header-panel {
     background: #ffffff !important;
