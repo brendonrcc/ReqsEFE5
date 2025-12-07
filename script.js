@@ -79,11 +79,31 @@
             
             // Resetar seleções ao fechar
             document.querySelectorAll('.subgroup-selection-btn').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('subgroup-permissions-list').innerHTML = '';
         }
     }
 
     function toggleSubgroupSelection(btn) {
         btn.classList.toggle('selected');
+        const group = btn.dataset.group; // DA, DRI, DM
+        const container = document.getElementById('subgroup-permissions-list');
+        const inputId = `perm-input-${group}`;
+
+        if (btn.classList.contains('selected')) {
+            // Criar campo de permissão dinâmico
+            const wrapper = document.createElement('div');
+            wrapper.id = inputId;
+            wrapper.className = "input-bar bg-amber-50/50 border-amber-100";
+            wrapper.innerHTML = `
+                <div class="input-icon-box text-amber-600"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></div>
+                <input type="text" name="permissao_${group}" placeholder="Quem permitiu no ${group}?" class="input-field text-sm font-semibold text-amber-900 placeholder-amber-700/50" required>
+            `;
+            container.appendChild(wrapper);
+        } else {
+            // Remover campo se desmarcado
+            const el = document.getElementById(inputId);
+            if(el) el.remove();
+        }
     }
 
     // --- FUNÇÃO PARA ENVIAR PARA A PLANILHA DO DA ---
@@ -991,22 +1011,16 @@
             rows.push([timestamp, formData.get('nickname'), formData.get('dias')]);
 
         } else if (formId === 'form-licenca') {
-            // CORREÇÃO: "Data/Hora | Tipo | Nickname | Dias | Retorno | Permissão"
             sheetName = "Licença";
             const nick = formData.get('nickname');
             const dias = parseInt(formData.get('dias'));
             const permissao = formData.get('permissao');
 
-            // Lógica do Tipo (Licença ou Reserva)
             const tipo = dias <= 30 ? "Licença" : "Reserva";
-
-            // Cálculo da Data de Retorno
             const dataRetornoObj = new Date();
             dataRetornoObj.setDate(dataRetornoObj.getDate() + dias);
             const retorno = dataRetornoObj.toLocaleDateString('pt-BR');
 
-            // Separa múltiplos nicks caso o usuário use barras (ex: "Nick1 / Nick2")
-            // Mesmo que não use chips, o sistema aceita barras.
             const nicks = nick.split('/').map(n => n.trim()).filter(n => n);
             
             nicks.forEach(n => {
@@ -1298,12 +1312,10 @@
                     if (form.id === 'form-licenca' && document.getElementById('check-subgrupo-licenca').checked) {
                         const selectedButtons = document.querySelectorAll('#subgroup-options-container .subgroup-selection-btn.selected');
                         selectedButtons.forEach(b => {
-                            // Agora busca o ID do tópico diretamente do CONFIG usando o data-group (DA, DRI, DM)
-                            const groupName = b.dataset.group; // Ex: "DA"
-                            const configKey = "topic" + groupName; // Ex: "topicDA"
-                            
+                            const groupName = b.dataset.group;
+                            const configKey = "topic" + groupName;
                             subgruposParaPostar.push({
-                                id: CONFIG[configKey], // Pega o ID (2, 3 ou 4) do CONFIG
+                                id: CONFIG[configKey],
                                 name: groupName
                             });
                         });
@@ -1312,7 +1324,7 @@
                     for (let i = 0; i < queue.length; i++) {
                         const item = queue[i];
                         
-                        // Postagem Principal
+                        // Postagem Principal (Usa BBCode original gerado, com permissão original)
                         btnText.textContent = `POSTANDO ${item.id.toUpperCase()}...`;
                         showNotificationProgress("Processando...", `Enviando postagem do <strong>${item.id}</strong> (Tópico Principal)...`);
                         await postToForumTopic(CONFIG.mainTopicId, item.bbcode);
@@ -1321,10 +1333,22 @@
                         if (subgruposParaPostar.length > 0) {
                             for (let s = 0; s < subgruposParaPostar.length; s++) {
                                 const sub = subgruposParaPostar[s];
-                                await delay(2500); // Delay entre postagens para evitar flood
+                                
+                                // Captura a permissão específica deste subgrupo
+                                const specificPerm = formData.get(`permissao_${sub.name}`);
+                                
+                                // Substitui a permissão no BBCode original (Troca [b]Permissão:[/b] X por [b]Permissão:[/b] Y)
+                                let specificBBCode = item.bbcode;
+                                if(specificPerm) {
+                                     specificBBCode = specificBBCode.replace(/\[b\]Permissão:\[\/b\] .+/g, `[b]Permissão:[/b] ${specificPerm}`);
+                                     // Caso o formato não tenha espaço
+                                     specificBBCode = specificBBCode.replace(/\[b\]Permissão:\[\/b\].*?\n/g, `[b]Permissão:[/b] ${specificPerm}\n`);
+                                }
+
+                                await delay(2500); 
                                 btnText.textContent = `POSTANDO EM ${sub.name}...`;
                                 showNotificationProgress("Processando...", `Enviando postagem para <strong>${sub.name}</strong>...`);
-                                await postToForumTopic(sub.id, item.bbcode);
+                                await postToForumTopic(sub.id, specificBBCode);
                             }
                         }
 
