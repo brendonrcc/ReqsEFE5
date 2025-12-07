@@ -568,3 +568,57 @@ input:checked + .da-content .da-label {
 .subgroup-perm-input.hidden {
     display: none;
 }
+
+/* Input Minimalista para Subgrupos */
+.minimal-perm-group {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0 12px;
+    height: 44px;
+    transition: all 0.3s ease;
+    animation: fadeInDown 0.3s ease-out;
+}
+
+.minimal-perm-group:focus-within {
+    border-color: #94a3b8;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transform: translateY(-1px);
+}
+
+.minimal-perm-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    min-width: 40px;
+    text-align: center;
+}
+
+.minimal-perm-input {
+    flex: 1;
+    font-size: 13px;
+    font-family: 'Manrope', sans-serif;
+    color: #1e293b;
+    font-weight: 600;
+    background: transparent;
+    outline: none;
+    width: 100%;
+}
+
+.minimal-perm-input::placeholder {
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
