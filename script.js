@@ -87,22 +87,33 @@
         btn.classList.toggle('selected');
         const group = btn.dataset.group; // DA, DRI, DM
         const container = document.getElementById('subgroup-permissions-list');
-        const inputId = `perm-input-${group}`;
+        const inputId = `perm-group-${group}`;
 
         if (btn.classList.contains('selected')) {
-            // Criar campo de permissão dinâmico
+            // Criar campo de permissão dinâmico e minimalista
             const wrapper = document.createElement('div');
             wrapper.id = inputId;
-            wrapper.className = "input-bar bg-amber-50/50 border-amber-100";
+            wrapper.className = "minimal-perm-group";
+            
+            // Define cores de tag baseadas no grupo (opcional, mas bonito)
+            let tagColor = "bg-slate-100 text-slate-500";
+            if(group === 'DA') tagColor = "bg-sky-50 text-sky-600";
+            if(group === 'DRI') tagColor = "bg-pink-50 text-pink-600";
+            if(group === 'DM') tagColor = "bg-orange-50 text-orange-600";
+
             wrapper.innerHTML = `
-                <div class="input-icon-box text-amber-600"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></div>
-                <input type="text" name="permissao_${group}" placeholder="Quem permitiu no ${group}?" class="input-field text-sm font-semibold text-amber-900 placeholder-amber-700/50" required>
+                <span class="minimal-perm-label ${tagColor}">${group}</span>
+                <input type="text" name="permissao_${group}" placeholder="Quem permitiu no ${group}?" class="minimal-perm-input" required>
             `;
             container.appendChild(wrapper);
         } else {
             // Remover campo se desmarcado
             const el = document.getElementById(inputId);
-            if(el) el.remove();
+            if(el) {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(-5px)';
+                setTimeout(() => el.remove(), 250);
+            }
         }
     }
 
@@ -1303,11 +1314,10 @@
                     }
                 }
 
-                // 3. Postar no Fórum (COM LÓGICA DE SUBGRUPOS)
+                // 3. Postar no Fórum (COM LÓGICA DE SUBGRUPOS + ANTI-FLOOD FORTE)
                 if (form.id !== 'form-advertencia') {
                     const queue = generatePostQueue(form.id, formData, form);
                     
-                    // Verifica subgrupos ativos apenas se for licença
                     let subgruposParaPostar = [];
                     if (form.id === 'form-licenca' && document.getElementById('check-subgrupo-licenca').checked) {
                         const selectedButtons = document.querySelectorAll('#subgroup-options-container .subgroup-selection-btn.selected');
@@ -1324,28 +1334,30 @@
                     for (let i = 0; i < queue.length; i++) {
                         const item = queue[i];
                         
-                        // Postagem Principal (Usa BBCode original gerado, com permissão original)
+                        // Postagem Principal
                         btnText.textContent = `POSTANDO ${item.id.toUpperCase()}...`;
                         showNotificationProgress("Processando...", `Enviando postagem do <strong>${item.id}</strong> (Tópico Principal)...`);
                         await postToForumTopic(CONFIG.mainTopicId, item.bbcode);
                         
-                        // Postagens em Subgrupos (Loop Extra)
+                        // Postagens em Subgrupos (com ANTI-FLOOD VISUAL)
                         if (subgruposParaPostar.length > 0) {
                             for (let s = 0; s < subgruposParaPostar.length; s++) {
                                 const sub = subgruposParaPostar[s];
                                 
-                                // Captura a permissão específica deste subgrupo
+                                // Anti-flood: Espera 16 segundos com contador visual
+                                for (let sec = 16; sec > 0; sec--) {
+                                    btnText.textContent = `AGUARDE... ${sec}s`;
+                                    showNotificationProgress("Anti-Flood Ativo", `Aguardando <strong>${sec} segundos</strong> para postar no tópico do <strong>${sub.name}</strong>...`);
+                                    await delay(1000);
+                                }
+
                                 const specificPerm = formData.get(`permissao_${sub.name}`);
-                                
-                                // Substitui a permissão no BBCode original (Troca [b]Permissão:[/b] X por [b]Permissão:[/b] Y)
                                 let specificBBCode = item.bbcode;
                                 if(specificPerm) {
                                      specificBBCode = specificBBCode.replace(/\[b\]Permissão:\[\/b\] .+/g, `[b]Permissão:[/b] ${specificPerm}`);
-                                     // Caso o formato não tenha espaço
                                      specificBBCode = specificBBCode.replace(/\[b\]Permissão:\[\/b\].*?\n/g, `[b]Permissão:[/b] ${specificPerm}\n`);
                                 }
 
-                                await delay(2500); 
                                 btnText.textContent = `POSTANDO EM ${sub.name}...`;
                                 showNotificationProgress("Processando...", `Enviando postagem para <strong>${sub.name}</strong>...`);
                                 await postToForumTopic(sub.id, specificBBCode);
