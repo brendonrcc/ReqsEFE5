@@ -840,24 +840,24 @@
                     else if (newRank < oldRank) dynamicTitle = "Rebaixamento";
                     else dynamicTitle = "Alteração de Cargo";
 
-                    groupContent += `[b]Nickname(s):[/b] ${joinedNicks}\n`;
+                    groupContent += `[font=Poppins][b]Nickname(s):[/b] ${joinedNicks}\n`;
                     groupContent += `[b]Cargo atual:[/b] ${cargoAtual}\n`;
                     groupContent += `[b]Novo cargo:[/b] ${novoCargo}\n`;
                     groupContent += `[b]Motivo(s):[/b] ${motivo}\n`;
-                    groupContent += `[b]Data:[/b] ${data}\n`;
+                    groupContent += `[b]Data:[/b] ${data}[/font]\n`;
 
                 } else if (formId === 'form-saida' || formId === 'form-expulsao') {
                     const cargo = formElement.querySelector(`[name="cargo_g${gId}"]`)?.value || "Não informado";
                     const motivo = formElement.querySelector(`[name="motivo_g${gId}"]`)?.value || "Não informado";
                     
-                    groupContent += `[b]Nickname(s):[/b] ${joinedNicks}\n`;
+                    groupContent += `[font=Poppins][b]Nickname(s):[/b] ${joinedNicks}\n`;
                     groupContent += `[b]Cargo:[/b] ${cargo}\n`;
                     groupContent += `[b]Motivo(s):[/b] ${motivo}\n`;
                     groupContent += `[b]Permissão:[/b] ${permissao}\n`;
-                    groupContent += `[b]Data:[/b] ${todayStr}\n`;
+                    groupContent += `[b]Data:[/b] ${todayStr}[/font]\n`;
 
                     if(formId === 'form-saida') {
-                        groupContent += `\n✓ ${termo}\n`;
+                        groupContent += `\n[font=Poppins]✓ ${termo} [/font]\n`;
                     }
                 }
 
@@ -871,12 +871,12 @@
             const nick = formData.get('nickname');
             
             if (formId === 'form-entrada' || formId === 'form-reintegracao') {
-                let finalContent = `[b]Nickname(s):[/b] ${nick}\n`;
+                let finalContent = `[font=Poppins][b]Nickname(s):[/b] ${nick}\n`;
                 if(formId === 'form-reintegracao') {
-                     finalContent += `[b]Graduação:[/b] ${formData.get('graduacao')}\n`;
+                     finalContent += `[b]Graduação:[/b] ${formData.get('graduacao')}[/font]\n`;
                      title = "Reintegração";
                 }
-                finalContent += `[b]Data:[/b] ${todayStr}\n`;
+                finalContent += `[font=Poppins][b]Data:[/b] ${todayStr}[/font]\n`;
 
                 queue.push({
                     id: formId === 'form-entrada' ? 'Entrada Coletiva' : 'Reintegração',
@@ -896,7 +896,7 @@
                 if(nick && nick.includes('/')) {
                     const nickList = nick.split('/').map(n => n.trim());
                     nickList.forEach(n => {
-                        let finalContent = `[b]Nickname:[/b] ${n}\n`;
+                        let finalContent = `[font=Poppins][b]Nickname:[/b] ${n}[/font]\n`;
 
                         if (formId === 'form-licenca') {
                             const dias = formData.get('dias');
@@ -905,21 +905,21 @@
                             dataRetorno.setDate(dataRetorno.getDate() + parseInt(dias));
                             const dataRetornoStr = dataRetorno.toLocaleDateString('pt-BR');
 
-                            finalContent += `[b]Duração:[/b] ${dias} dias\n`;
+                            finalContent += `[font=Poppins][b]Duração:[/b] ${dias} dias\n`;
                             finalContent += `[b]Solicitada em:[/b] ${todayStr}\n`;
                             finalContent += `[b]Retorno em:[/b] ${dataRetornoStr}\n`;
-                            finalContent += `[b]Permissão:[/b] ${permissao}\n`;
+                            finalContent += `[b]Permissão:[/b] ${permissao}[/font]\n`;
                         } else if (formId === 'form-retorno_licenca') {
-                            finalContent += `[b]Data:[/b] ${todayStr}\n`;
+                            finalContent += `[font=Poppins][b]Data:[/b] ${todayStr}[/font]\n`;
                         } else {
                             finalContent += commonPart;
-                            finalContent += `[b]Data:[/b] ${todayStr}\n`;
+                            finalContent += `[font=Poppins][b]Data:[/b] ${todayStr}[/font]\n`;
                         }
                         
                         queue.push({ id: n, bbcode: generateSingleBBCode(dynamicTitle, finalContent) });
                     });
                 } else if (nick) {
-                    let finalContent = `[b]Nickname:[/b] ${nick}\n`;
+                    let finalContent = `[font=Poppins][b]Nickname:[/b] ${nick}[/font]\n`;
                     
                     if (formId === 'form-licenca') {
                         const dias = formData.get('dias');
@@ -928,15 +928,15 @@
                         dataRetorno.setDate(dataRetorno.getDate() + parseInt(dias));
                         const dataRetornoStr = dataRetorno.toLocaleDateString('pt-BR');
 
-                        finalContent += `[b]Duração:[/b] ${dias} dias\n`;
+                        finalContent += `[font=Poppins][b]Duração:[/b] ${dias} dias\n`;
                         finalContent += `[b]Solicitada em:[/b] ${todayStr}\n`;
                         finalContent += `[b]Retorno em:[/b] ${dataRetornoStr}\n`;
-                        finalContent += `[b]Permissão:[/b] ${permissao}\n`;
+                        finalContent += `[b]Permissão:[/b] ${permissao}[/font]\n`;
                     } else if (formId === 'form-retorno_licenca') {
-                        finalContent += `[b]Data:/b] ${todayStr}\n`;
+                        finalContent += `[font=Poppins][b]Data:/b] ${todayStr}[/font]\n`;
                     } else {
                         finalContent += commonPart;
-                        finalContent += `[b]Data:[/b] ${todayStr}\n`;
+                        finalContent += `[font=Poppins][b]Data:[/b] ${todayStr}[/font]\n`;
                     }
 
                     queue.push({
@@ -946,7 +946,7 @@
                 } else {
                      queue.push({
                         id: 'Único',
-                        bbcode: generateSingleBBCode(dynamicTitle, commonPart + `[b]Data:[/b] ${todayStr}\n`)
+                        bbcode: generateSingleBBCode(dynamicTitle, commonPart + `[font=Poppins][b]Data:[/b] ${todayStr}[/font]\n`)
                     });
                 }
             }
@@ -957,9 +957,9 @@
 
     function getCommonFieldsBBCode(formId, formData) {
         let text = "";
-        if (formId === 'form-transferencia') text += `[b]Nickname Atual:[/b] ${formData.get('nickname_atual')}\n[b]Novo Nickname:[/b] ${formData.get('nickname_novo')}\n`;
-        else if (formId === 'form-migracao') text += `[b]Para:[/b] ${formData.get('corpo_destino')}\n`;
-        else if (formId === 'form-prolongamento') text += `[b]Dias:[/b] ${formData.get('dias')}\n`;
+        if (formId === 'form-transferencia') text += `[font=Poppins][b]Nickname Atual:[/b] ${formData.get('nickname_atual')}\n[b]Novo Nickname:[/b] ${formData.get('nickname_novo')}[/font]\n`;
+        else if (formId === 'form-migracao') text += `[font=Poppins][b]Para:[/b] ${formData.get('corpo_destino')}[/font]\n`;
+        else if (formId === 'form-prolongamento') text += `[font=Poppins][b]Dias:[/b] ${formData.get('dias')}[/font]\n`;
         return text;
     }
 
@@ -1183,7 +1183,7 @@
 
         if (formId === 'form-advertencia' && gId) {
             githubUrl = MP_LINKS.punicao;
-            subject = "[EFE] Advertência";
+            subject = "[EFE] Notificação - LEIA!";
             
             const tipo = formElement.querySelector(`[name="tipo_g${gId}"]`)?.value || "";
             const motivo = formElement.querySelector(`[name="motivo_g${gId}"]`)?.value || "";
@@ -1196,7 +1196,7 @@
         }
         else if (formId === 'form-expulsao' && gId) {
             githubUrl = MP_LINKS.punicao;
-            subject = "[EFE] Expulsão";
+            subject = "[EFE] Expulsão - LEIA!";
             
             const motivo = formElement.querySelector(`[name="motivo_g${gId}"]`)?.value || "";
             const comp = formData.get(`comprovacoes_g${gId}_${safeNick}`) || "N/A";
@@ -1217,7 +1217,7 @@
             if (newRank < oldRank) {
                 // Rebaixamento (Punição) -> Envia MP
                 githubUrl = MP_LINKS.punicao;
-                subject = "[EFE] Rebaixamento";
+                subject = "[EFE] Rebaixamento - LEIA!";
                 const motivo = formElement.querySelector(`[name="motivo_g${gId}"]`)?.value || "";
                 const comp = formData.get(`comprovacoes_g${gId}_${safeNick}`) || "N/A";
                 
@@ -1233,7 +1233,7 @@
         }
         else if (formId === 'form-entrada' || formId === 'form-reintegracao') {
              githubUrl = MP_LINKS.entrada;
-             subject = "[EFE] Entrada";
+             subject = "[EFE] Carta de Boas-Vindas!";
         }
         else if (formId === 'form-saida') {
              return null;
@@ -1440,7 +1440,7 @@
                     }
                     showNotificationSuccess("Sucesso!", "Requerimentos processados.", true);
                 } else {
-                    showNotificationSuccess("Sucesso!", "Advertência registrada (MP + Planilha).", false);
+                    showNotificationSuccess("Sucesso!", "Punição registrada.", false);
                 }
                 
                 const btnConfira = document.getElementById('confira-post-btn');
