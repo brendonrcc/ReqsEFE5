@@ -1351,7 +1351,7 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
             const chipsContainer = form.querySelector('.nickname-chips-container');
             const requiredNicknames = ['form-entrada', 'form-saida', 'form-expulsao', 'form-promocao', 'form-advertencia'];
             if (chipsContainer && requiredNicknames.includes(form.id) && chipsContainer.children.length === 0) {
-                 showNotificationError("Campo de nickname vazio!", "Adicione pelo menos um nickname.");
+                 showNotificationError("Campo vazio!", "Adicione pelo menos um nickname.");
                  return;
             }
 
@@ -1364,31 +1364,35 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
             btn.disabled = true;
             if(btnIcon) btnIcon.classList.add('hidden');
             if(spinner) spinner.classList.remove('hidden');
+            
+            await new Promise(r => requestAnimationFrame(r));
 
             try {
                 const formData = new FormData(form);
+
+                // --- LOGS E PLANILHAS ---
+                btnText.textContent = "REGISTRANDO...";
                 
-                // 1. Envio para o Log do DA (se aplicável)
+                // Envio DA
                 if (form.id === 'form-entrada' && document.getElementById('check-membro-da').checked) {
                     const aplicador = document.getElementById('da-aplicador-input').value;
                     const veredito = document.getElementById('da-veredito-select').value;
                     const participantes = formData.get('nickname'); 
-                    
                     await sendToLogDA(aplicador, daStartTime, participantes, veredito);
-
+                    
                     if (veredito === "Reprovado(a)") {
                         showNotificationSuccess("Registrado", "Reprovação registrada.", false);
-                        throw new Error("STOP_SUCCESS"); // Para a execução aqui de propósito
+                        throw new Error("STOP_SUCCESS"); 
                     }
                 }
                 
-                // 2. Envio para Planilha
+                // Envio Planilha
                 await sendToSheet(form.id, formData, form);
 
-                // 3. Punição (Abre aba)
+                // Abertura de Abas (Punição)
                 await handlePunishmentTabs(form.id, form);
                 
-                // 4. Envio de MPs
+                // --- MENSAGENS PRIVADAS (MPs) ---
                 const mpForms = ['form-entrada', 'form-saida', 'form-expulsao', 'form-promocao', 'form-advertencia', 'form-reintegracao'];
                 
                 if (mpForms.includes(form.id)) {
@@ -1401,34 +1405,30 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
                         if (rawNick) nicksToSend = rawNick.split('/').map(n => n.trim()).filter(n => n);
                     }
                     
-                    let shouldShowLoading = false;
-                    // Verifica se vai precisar enviar MP antes de mudar o texto do botão
-                    for (let i = 0; i < nicksToSend.length; i++) {
-                        const template = await prepareMPData(form.id, nicksToSend[i], formData, form);
-                        if(template) { shouldShowLoading = true; break; }
+                    let templates = [];
+                    for (const nick of nicksToSend) {
+                        const tpl = await prepareMPData(form.id, nick, formData, form);
+                        if(tpl) templates.push({ nick, ...tpl });
                     }
 
-                    if(shouldShowLoading) {
-                        btnText.textContent = "PROCESSANDO MP'S...";
-                        for (let i = 0; i < nicksToSend.length; i++) {
-                            const nick = nicksToSend[i];
-                            const template = await prepareMPData(form.id, nick, formData, form);
+                    if(templates.length > 0) {
+                        btnText.textContent = "ENVIANDO MP'S...";
+                        for (let i = 0; i < templates.length; i++) {
+                            const item = templates[i];
+                            btnText.textContent = `MP (${i+1}/${templates.length}): ${item.nick}`;
+                            const success = await sendPrivateMessage(item.nick, item.subject, item.message);
+                            if (!success) showToast("Erro MP", `Falha ao enviar para ${item.nick}.`, "danger", 3000);
                             
-                            if (template) {
-                                btnText.textContent = `MP (${i+1}/${nicksToSend.length}): ${nick}`;
-                                const success = await sendPrivateMessage(nick, template.subject, template.message);
-                                if (!success) showToast("Erro MP", `Falha ao enviar para ${nick}.`, "danger", 3000);
-                                if (i < nicksToSend.length - 1) await delay(MP_DELAY); 
-                            }
+                            if (i < templates.length - 1) await delay(MP_DELAY); 
                         }
                     }
                 }
 
-                // 5. Postagem no Fórum (CORREÇÃO DO LOOP AQUI)
+                // --- FASE 3: POSTAGEM NO FÓRUM ---
                 if (form.id !== 'form-advertencia') {
+                    btnText.textContent = "GERANDO BBCODE...";
                     const queue = generatePostQueue(form.id, formData, form);
                     
-                    // Prepara subgrupos se houver
                     let subgruposParaPostar = [];
                     const subCheck = form.querySelector('.subgroup-toggle-checkbox');
                     if (subCheck && subCheck.checked) {
@@ -1441,16 +1441,15 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
                         });
                     }
 
-                    // --- LOOP ROBUSTO ANTI-FLOOD ---
                     for (let i = 0; i < queue.length; i++) {
                         const item = queue[i];
                         
                         btnText.textContent = `POSTANDO ${item.id.toUpperCase()}...`;
-                        showNotificationProgress("Processando...", `Enviando postagem do <strong>${item.id}</strong> (Tópico Principal)...`);
+                        showNotificationProgress("Enviando...", `Postando <strong>${item.id}</strong>...`);
                         
-                        // Lógica de Tentativa e Erro (Retry) para o Post Principal
                         let posted = false;
                         let attempts = 0;
+
                         while(!posted && attempts < 3) {
                             try {
                                 await postToForumTopic(CONFIG.mainTopicId, item.bbcode);
@@ -1458,31 +1457,28 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
                             } catch (err) {
                                 if(err.message.toLowerCase().includes('flood') || err.message.toLowerCase().includes('aguarde')) {
                                     attempts++;
-                                    // Se der Flood, avisa e espera 16s antes de tentar de novo o MESMO item
-                                    for(let w = 16; w > 0; w--) {
-                                        btnText.textContent = `FLOOD DETECTADO... ${w}s`;
+                                    for(let w = 17; w > 0; w--) {
+                                        btnText.textContent = `FLOOD (T${attempts})... ${w}s`;
                                         await delay(1000);
                                     }
                                 } else {
-                                    throw err; // Se for outro erro (ex: 404), lança e para tudo
+                                    console.error("Erro fatal ao postar:", err);
+                                    showToast("Erro Postagem", `Falha ao postar ${item.id}.`, "danger");
+                                    break; 
                                 }
                             }
                         }
 
-                        if(!posted) throw new Error(`Falha ao postar ${item.id} após várias tentativas.`);
 
-                        // Postar nos Subgrupos (DA, DRI, DM) para este item específico
-                        if (subgruposParaPostar.length > 0) {
-                            for (let s = 0; s < subgruposParaPostar.length; s++) {
-                                const sub = subgruposParaPostar[s];
-                                
-                                // Delay obrigatório para subgrupos
-                                for (let sec = 16; sec > 0; sec--) {
+                        if (posted && subgruposParaPostar.length > 0) {
+                            for (const sub of subgruposParaPostar) {
+                                for (let sec = 17; sec > 0; sec--) {
                                     btnText.textContent = `AGUARDE... ${sec}s`;
-                                    showNotificationProgress("Anti-Flood Ativo", `Aguardando <strong>${sec} segundos</strong> para postar no tópico do <strong>${sub.name}</strong>...`);
+                                    if(sec % 5 === 0) showNotificationProgress("Anti-Flood", `Aguardando para postar em <strong>${sub.name}</strong>...`);
                                     await delay(1000);
                                 }
 
+                        
                                 const specificPerm = formData.get(`permissao_${sub.name}`);
                                 let specificBBCode = item.bbcode;
                                 if(specificPerm) {
@@ -1495,7 +1491,7 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
                                 }
 
                                 btnText.textContent = `POSTANDO EM ${sub.name}...`;
-                                // Tenta postar no subgrupo com retry também
+                                
                                 let subPosted = false;
                                 let subAttempts = 0;
                                 while(!subPosted && subAttempts < 3) {
@@ -1505,39 +1501,39 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
                                     } catch(err) {
                                         if(err.message.toLowerCase().includes('flood')) {
                                             subAttempts++;
-                                            for(let w = 16; w > 0; w--) {
-                                                btnText.textContent = `FLOOD SUBGRUPO... ${w}s`;
+                                            for(let w = 17; w > 0; w--) {
+                                                btnText.textContent = `FLOOD SUB... ${w}s`;
                                                 await delay(1000);
                                             }
-                                        } else throw err;
+                                        } else {
+                                            break; 
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        // Delay entre itens da fila (Entre Grupo 1 e Grupo 2)
-                        // Aumentado para 16s para evitar o Flood na próxima iteração
                         if (i < queue.length - 1) {
-                            for (let sec = 16; sec > 0; sec--) {
-                                btnText.textContent = `PRÓXIMO GRUPO... ${sec}s`;
-                                showNotificationProgress("Anti-Flood", `Aguardando <strong>${sec}s</strong> para enviar o próximo grupo...`);
+                            for (let sec = 10; sec > 0; sec--) {
+                                btnText.textContent = `PRÓXIMO ITEM... ${sec}s`;
                                 await delay(1000);
                             }
                         }
                     }
-                    showNotificationSuccess("Sucesso!", "Requerimentos processados.", true);
+                    showNotificationSuccess("Concluído!", "Todos os requerimentos foram processados.", true);
                 } else {
-                    showNotificationSuccess("Sucesso!", "Punição registrada.", false);
+                    showNotificationSuccess("Concluído!", "Punição registrada com sucesso.", false);
                 }
                 
                 const btnConfira = document.getElementById('confira-post-btn');
                 if(btnConfira) btnConfira.onclick = () => { window.location.href = newestUrl(CONFIG.mainTopicId); };
 
             } catch (error) {
-                if(error.message === "STOP_SUCCESS") return; // Erro fake para parar execução com sucesso (Reprovação DA)
-                console.error("Erro:", error);
-                showNotificationError("Falha", error.message);
+                if(error.message === "STOP_SUCCESS") return;
+                console.error("Erro Geral:", error);
+                showNotificationError("Falha", "Ocorreu um erro inesperado. Verifique o console.");
             } finally {
+                // Restaura botão
                 btn.disabled = false;
                 btnText.textContent = originalText;
                 if(btnIcon) btnIcon.classList.remove('hidden');
