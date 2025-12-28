@@ -443,9 +443,17 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
              return;
         }
 
+        const originalWidth = btn.offsetWidth;
+        const originalHeight = btn.offsetHeight;
+        btn.style.width = `${originalWidth}px`;
+        btn.style.height = `${originalHeight}px`;
+        btn.style.display = 'flex';           
+        btn.style.alignItems = 'center';      
+        btn.style.justifyContent = 'center';  
+
         const originalIcon = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = `<svg class="spinner w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        btn.innerHTML = `<svg class="animate-spin w-5 h-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
 
         const segments = rawValue.split('/').map(n => n.trim()).filter(n => n.length > 0);
         let addedCount = 0; 
@@ -458,11 +466,12 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
             for (let segment of segments) {
                 let nick = segment;
                 let targetGroup = 1;
+
                 const groupMatch = segment.match(/^(.*):([1-4])$/);
 
                 if (groupMatch) {
-                    nick = groupMatch[1].trim(); // O nickname real
-                    targetGroup = parseInt(groupMatch[2]); // O número do grupo
+                    nick = groupMatch[1].trim();
+                    targetGroup = parseInt(groupMatch[2]);
                 } 
 
                 const encodedNick = encodeURIComponent(nick);
@@ -481,13 +490,13 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
 
                         if (addChip(nick, chipsContainerId, hiddenInputId, containerId, limit, enableGroups, targetGroup)) {
                             addedCount++;
-                            showToast("Aviso", `Usuário <b>${nick}</b> não encontrado na API, mas foi adicionado.`, "warning", 5000);
+                            showToast("Aviso", `<b>${nick}</b> não encontrado na API, mas adicionado.`, "warning", 5000);
                         }
                     }
                 } catch (innerError) {
                      if (addChip(nick, chipsContainerId, hiddenInputId, containerId, limit, enableGroups, targetGroup)) {
                         addedCount++;
-                        showToast("Aviso", `Erro de conexão ao verificar <b>${nick}</b>. Adicionado manualmente.`, "warning", 4000);
+                        showToast("Aviso", `Erro de conexão em <b>${nick}</b>. Adicionado manualmente.`, "warning", 4000);
                     }
                 }
             }
@@ -498,14 +507,16 @@ async function verifyAndAddNickname(inputId, chipsContainerId, hiddenInputId, co
                     showToast("Sucesso", `${addedCount} Nickname(s) processado(s).`, "info", 3000);
                 }
             } else if (segments.length > 0) {
-                showToast("Aviso", "Nenhum nickname foi adicionado (duplicados ou limite).", "warning", 3000);
+                showToast("Aviso", "Nenhum nickname adicionado.", "warning", 3000);
             }
         } catch (error) {
             console.error(error);
-            showToast("Erro Crítico", "Falha no processo de verificação.", "danger");
+            showToast("Erro", "Falha no processo.", "danger");
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalIcon;
+            btn.style.width = '';
+            btn.style.height = '';
         }
     }
 
